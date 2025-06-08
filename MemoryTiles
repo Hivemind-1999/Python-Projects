@@ -1,0 +1,272 @@
+import random, pygame, sys
+from pygame.locals import *
+
+FPS = 30
+WINDOWWIDTH = 640
+WINDOWHEIGHT = 480
+REVEALSPEED = 8
+TILESIZE = 40
+GAPSIZE = 10
+BOARDWIDTH = 10
+BOARDHEIGHT = 7
+XMARGIN = int((WINDOWWIDTH - (BOARDWIDTH * (TILESIZE + GAPSIZE))) / 2)
+YMARGIN = int((WINDOWHEIGHT - (BOARDHEIGHT * (TILESIZE + GAPSIZE))) / 2)
+
+GRAY     = (100, 100, 100)
+WHITE    = (255, 255, 255)
+RED      = (255,   0,   0)
+GREEN    = (  0, 255,   0)
+BLUE     = (  0,   0, 255)
+DARKBLUE = ( 60,  60, 100)
+YELLOW   = (255, 255,   0)
+ORANGE   = (255, 128,   0)
+PURPLE   = (255,   0, 255)
+CYAN     = (  0, 255, 255)
+
+BGCOLOR = DARKBLUE
+LIGHTBGCOLOR = GRAY
+TILECOLOR = WHITE
+HIGHLIGHT = BLUE
+
+COLORS = (RED, GREEN, BLUE, YELLOW, ORANGE, PURPLE, CYAN)
+SHAPES = ('donut', 'square', 'diamond', 'lines', 'oval')
+
+def main():
+    global FPSCLOCK, DISPLAYSURF
+    pygame.init()
+    FPSCLOCK = pygame.time.Clock()
+    DISPLAYSURF = pygame.display.set_mode((WINDOWWIDTH, WINDOWHEIGHT))
+
+    CursorXCoord = 0
+    CursorYCoord = 0
+    pygame.display.set_caption('Memory Game')
+
+    mainBoard = boardBuilder()
+    revealedBoxes = generateRevealedBoxesData(False)
+
+    firstSelection = None
+
+    DISPLAYSURF.fill(BGCOLOR)
+    startGameAnimation(mainBoard)
+
+    while True:
+        mouseClicked = False
+
+        DISPLAYSURF.fill(BGCOLOR)
+        drawBoard(mainBoard, revealedBoxes)
+
+        for event in pygame.event.get():
+
+            if event.type == QUIT or (event.type == KEYUP and event.key == K_ESCAPE):
+                pygame.quit()
+                sys.exit()
+            elif event.type == MOUSEMOTION:
+                CursorXCoord, CursorYCoord = event.pos
+            elif event.type == MOUSEBUTTONUP:
+                CursorXCoord, CursorYCoord = event.pos
+                mouseClicked = True
+
+        TileXCoord, TileYCoord = positionConverter(CursorXCoord, CursorYCoord)
+
+        if TileXCoord != None and TileYCoord != None:
+
+            if not revealedBoxes[TileXCoord][TileYCoord]:
+                drawHighlightBox(TileXCoord, TileYCoord)
+
+            if not revealedBoxes[TileXCoord][TileYCoord] and mouseClicked:
+                revealBoxesAnimation(mainBoard, [(TileXCoord, TileYCoord)])
+                revealedBoxes[TileXCoord][TileYCoord] = True
+
+                if firstSelection == None:
+                    firstSelection = (TileXCoord, TileYCoord)
+
+                else:
+
+                    icon1shape, icon1color = getShapeAndColor(mainBoard, firstSelection[0], firstSelection[1])
+                    icon2shape, icon2color = getShapeAndColor(mainBoard, TileXCoord, TileYCoord)
+
+                    if icon1shape != icon2shape or icon1color != icon2color:
+ 
+                        pygame.time.wait(1000)
+                        coverBoxesAnimation(mainBoard, [(firstSelection[0], firstSelection[1]), (TileXCoord, TileYCoord)])
+                        revealedBoxes[firstSelection[0]][firstSelection[1]] = False
+                        revealedBoxes[TileXCoord][TileYCoord] = False
+
+                    elif hasWon(revealedBoxes):
+
+                        gameWonAnimation(mainBoard)
+                        pygame.time.wait(2000)
+
+                        mainBoard = boardBuilder()
+                        revealedBoxes = generateRevealedBoxesData(False)
+
+                        drawBoard(mainBoard, revealedBoxes)
+                        pygame.display.update()
+                        pygame.time.wait(1000)
+
+                        startGameAnimation(mainBoard)
+
+                    firstSelection = None
+
+        pygame.display.update()
+        FPSCLOCK.tick(FPS)
+
+
+def generateRevealedBoxesData(val):
+    revealedBoxes = []
+    for i in range(BOARDWIDTH):
+        revealedBoxes.append([val] * BOARDHEIGHT)
+    return revealedBoxes
+
+
+def boardBuilder():
+    icons = []
+    for color in COLORS:
+        for shape in SHAPES:
+            icons.append( (shape, color) )
+
+    random.shuffle(icons) 
+    numIconsUsed = int(BOARDWIDTH * BOARDHEIGHT / 2)
+    icons = icons[:numIconsUsed] * 2
+    random.shuffle(icons)
+
+    board = []
+    for x in range(BOARDWIDTH):
+        column = []
+        for y in range(BOARDHEIGHT):
+            column.append(icons[0])
+            del icons[0]
+        board.append(column)
+    return board
+
+
+def splitIntoGroupsOf(groupSize, theList):
+
+    result = []
+    for i in range(0, len(theList), groupSize):
+        result.append(theList[i:i + groupSize])
+    return result
+
+
+def leftTopCoordsOfBox(TileXCoord, TileYCoord):
+
+    left = TileXCoord * (TILESIZE + GAPSIZE) + XMARGIN
+    top = TileYCoord * (TILESIZE + GAPSIZE) + YMARGIN
+    return (left, top)
+
+
+def positionConverter(x, y):
+    for TileXCoord in range(BOARDWIDTH):
+        for TileYCoord in range(BOARDHEIGHT):
+            left, top = leftTopCoordsOfBox(TileXCoord, TileYCoord)
+            boxRect = pygame.Rect(left, top, TILESIZE, TILESIZE)
+            if boxRect.collidepoint(x, y):
+                return (TileXCoord, TileYCoord)
+    return (None, None)
+
+
+def drawIcon(shape, color, TileXCoord, TileYCoord):
+    quarter = int(TILESIZE * 0.25)
+    half =    int(TILESIZE * 0.5)
+
+    left, top = leftTopCoordsOfBox(TileXCoord, TileYCoord) # get pixel coords from board coords
+
+    if shape == 'donut':
+        pygame.draw.circle(DISPLAYSURF, color, (left + half, top + half), half - 5)
+        pygame.draw.circle(DISPLAYSURF, BGCOLOR, (left + half, top + half), quarter - 5)
+    elif shape == 'square':
+        pygame.draw.rect(DISPLAYSURF, color, (left + quarter, top + quarter, TILESIZE - half, TILESIZE - half))
+    elif shape == 'diamond':
+        pygame.draw.polygon(DISPLAYSURF, color, ((left + half, top), (left + TILESIZE - 1, top + half), (left + half, top + TILESIZE - 1), (left, top + half)))
+    elif shape == 'lines':
+        for i in range(0, TILESIZE, 4):
+            pygame.draw.line(DISPLAYSURF, color, (left, top + i), (left + i, top))
+            pygame.draw.line(DISPLAYSURF, color, (left + i, top + TILESIZE - 1), (left + TILESIZE - 1, top + i))
+    elif shape == 'oval':
+        pygame.draw.ellipse(DISPLAYSURF, color, (left, top + quarter, TILESIZE, half))
+
+
+def getShapeAndColor(board, TileXCoord, TileYCoord):
+    return board[TileXCoord][TileYCoord][0], board[TileXCoord][TileYCoord][1]
+
+
+def drawBoxCovers(board, boxes, coverage):
+
+    for box in boxes:
+        left, top = leftTopCoordsOfBox(box[0], box[1])
+        pygame.draw.rect(DISPLAYSURF, BGCOLOR, (left, top, TILESIZE, TILESIZE))
+        shape, color = getShapeAndColor(board, box[0], box[1])
+        drawIcon(shape, color, box[0], box[1])
+        if coverage > 0:
+            pygame.draw.rect(DISPLAYSURF, TILECOLOR, (left, top, coverage, TILESIZE))
+    pygame.display.update()
+    FPSCLOCK.tick(FPS)
+
+
+def revealBoxesAnimation(board, boxesToReveal):
+
+    for coverage in range(TILESIZE, (-REVEALSPEED) - 1, -REVEALSPEED):
+        drawBoxCovers(board, boxesToReveal, coverage)
+
+
+def coverBoxesAnimation(board, boxesToCover):
+    
+    for coverage in range(0, TILESIZE + REVEALSPEED, REVEALSPEED):
+        drawBoxCovers(board, boxesToCover, coverage)
+
+
+def drawBoard(board, revealed):
+    
+    for TileXCoord in range(BOARDWIDTH):
+        for TileYCoord in range(BOARDHEIGHT):
+            left, top = leftTopCoordsOfBox(TileXCoord, TileYCoord)
+            if not revealed[TileXCoord][TileYCoord]:
+                
+                pygame.draw.rect(DISPLAYSURF, TILECOLOR, (left, top, TILESIZE, TILESIZE))
+            else:
+                
+                shape, color = getShapeAndColor(board, TileXCoord, TileYCoord)
+                drawIcon(shape, color, TileXCoord, TileYCoord)
+
+
+def drawHighlightBox(TileXCoord, TileYCoord):
+    left, top = leftTopCoordsOfBox(TileXCoord, TileYCoord)
+    pygame.draw.rect(DISPLAYSURF, HIGHLIGHT, (left - 5, top - 5, TILESIZE + 10, TILESIZE + 10), 4)
+
+
+def startGameAnimation(board):
+    
+    coveredBoxes = generateRevealedBoxesData(False)
+    boxes = []
+    for x in range(BOARDWIDTH):
+        for y in range(BOARDHEIGHT):
+            boxes.append( (x, y) )
+    random.shuffle(boxes)
+    boxGroups = splitIntoGroupsOf(8, boxes)
+
+    drawBoard(board, coveredBoxes)
+    for boxGroup in boxGroups:
+        revealBoxesAnimation(board, boxGroup)
+        coverBoxesAnimation(board, boxGroup)
+
+
+def gameWonAnimation(board):
+    
+    coveredBoxes = generateRevealedBoxesData(True)
+    color1 = LIGHTBGCOLOR
+    color2 = BGCOLOR
+
+    for i in range(13):
+        color1, color2 = color2, color1 # swap colors
+        DISPLAYSURF.fill(color1)
+        drawBoard(board, coveredBoxes)
+        pygame.display.update()
+        pygame.time.wait(300)
+
+
+def hasWon(revealedBoxes):
+    
+    for i in revealedBoxes:
+        if False in i:
+            return False
+    return True
