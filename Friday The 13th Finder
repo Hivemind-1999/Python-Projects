@@ -1,0 +1,31 @@
+from datetime import date
+from datetime import timedelta
+
+def finder():
+
+    # Today is a Friday, 13th
+    if date.today().day == 13 and date.today().weekday() == 4:
+        
+        return date.today().strftime("%Y-%m-%d")
+
+    # Today is a Friday, but not the 13th, set the start point to next Friday
+    elif date.today().weekday() == 4:
+        
+        nextFriday = date.today() + timedelta(days = 7)
+        
+    # Today is not a Friday
+    else:
+
+        # Calculate the next Friday
+        daysToFriday = 4 - date.today().weekday()
+        if daysToFriday < 0:
+            daysToFriday += 7
+        
+        nextFriday = date.today() + timedelta(days = daysToFriday)
+
+    # From a Friday, check dates with a step of 7 days, until we land on the 13th
+    while nextFriday.day != 13:
+            
+            nextFriday += timedelta(days = 7)
+        
+    return nextFriday.strftime("%Y-%m-%d")
