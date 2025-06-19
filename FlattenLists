@@ -1,0 +1,37 @@
+def flattenPass(a_list):
+    
+    newList = []
+
+    # This will remain True if no lists are encountered (breaking the loop)
+    finished = True
+    
+    for item in a_list:
+        
+        if type(item) == list and len(item) == 1:
+                
+            newList.append(*item)
+            finished = False
+            
+        elif type(item) == list:
+            
+            for subitem in item:
+                
+                newList.append(subitem)
+            
+            finished = False
+            
+        elif type(item) != list:
+            
+            newList.append(item)
+            
+    return newList, finished
+
+def flatten(a_list):
+    
+    newList, finished = flattenPass(a_list)
+
+    # Remove one layer of depth
+    while not finished:
+        newList, finished = flattenPass(newList)
+    
+    return newList
