@@ -1,0 +1,28 @@
+from string import ascii_lowercase, ascii_uppercase
+
+def caesar_cypher_encode(message, key):
+
+    cypher = ""
+    newIndex = 0
+    
+    for letter in message:
+
+        if letter in ascii_lowercase:
+            
+            newIndex = (ascii_lowercase.index(letter) + key) % 26
+            cypher += ascii_lowercase[newIndex]
+            
+        elif letter in ascii_uppercase:
+            
+            newIndex = (ascii_uppercase.index(letter) + key) % 26
+            cypher += ascii_uppercase[newIndex] 
+            
+        else:
+            
+            cypher += letter
+
+    return cypher
+        
+def caesar_cypher_decode(message, key):
+    
+    return caesar_cypher_encode(message, -key)
