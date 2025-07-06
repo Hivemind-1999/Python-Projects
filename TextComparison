@@ -1,0 +1,35 @@
+import textwrap
+import itertools
+
+
+def sidebyside(left, right, width=79):
+    
+    if width % 2 == 0:
+        width -= 1
+    
+    columnWidth = width // 2
+    result = ""
+    
+    ltext = textwrap.wrap(left, columnWidth)
+    rtext = textwrap.wrap(right, columnWidth)
+        
+    ltext = [line + " " * (columnWidth - len(line)) if (len(line) != columnWidth) else line for line in ltext]
+    rtext = [line + " " * (columnWidth - len(line)) if (len(line) != columnWidth) else line for line in rtext]
+    
+    if len(left) >= len(right):
+        
+        ltext = [line+"|" for line in ltext]
+        
+    else:
+        
+        rtext = ["|"+line for line in rtext]
+
+    pairs = itertools.zip_longest(ltext, rtext, fillvalue = " " * columnWidth)
+    
+    for line in pairs:
+        
+        result += "".join(line) + "\n"
+        
+    return result
+    
+    
