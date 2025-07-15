@@ -1,0 +1,35 @@
+class Kelvin:
+    
+    def __get__(self, obj, objtype=None):
+        return obj._value
+        
+    def __set__(self, obj, value):
+        obj._value = value
+        
+class Fahrenheit:
+    
+    def __get__(self, obj, objtype=None):
+        return (obj._value * 9) / 5 - 459.67
+        
+    def __set__(self, obj, value):
+        obj._value = (value + 459.67) * 5 / 9
+
+class Celsius:
+    
+    def __get__(self, obj, objtype=None):
+        return obj._value - 273.15
+        
+    def __set__(self, obj, value):
+        obj._value = value + 273.15
+
+
+
+
+class Temperature:
+    
+    def __init__(self):
+        self._value = 0
+
+    kelvin = Kelvin()
+    fahrenheit = Fahrenheit()
+    celsius = Celsius()
